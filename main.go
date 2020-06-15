@@ -18,7 +18,7 @@ import (
 var (
 	sites []string
 	wg    = new(sync.WaitGroup)
-	sem   = types.NewSemaphore(5)
+	sem   = types.NewSemaphore(6)
 )
 
 func main() {
