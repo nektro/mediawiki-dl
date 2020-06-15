@@ -45,9 +45,6 @@ func main() {
 				if h[0] == '#' {
 					return
 				}
-				if strings.HasPrefix(h, "/wiki") {
-					h = h[5:]
-				}
 				if strings.Contains(h, "Special:AllPages") {
 					return
 				}
@@ -55,6 +52,7 @@ func main() {
 					i++
 					return
 				}
+				h = strings.TrimPrefix(h, "/wiki")
 				h = strings.TrimPrefix(h, "/index.php")
 				h = strings.TrimPrefix(h, "/")
 				last = h
