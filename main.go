@@ -47,12 +47,15 @@ func main() {
 		for {
 			i := 0
 			u1 := item + "?title=Special:AllPages&from=" + last
-			fetchDoc(http.MethodGet, u1, "#bodyContent a").Each(func(_ int, el *goquery.Selection) {
+			fetchDoc(http.MethodGet, u1, "#bodyContent a", "#WikiaPage a").Each(func(_ int, el *goquery.Selection) {
 				h, _ := el.Attr("href")
 				if h[0] == '#' {
 					return
 				}
 				if strings.Contains(h, "Special:AllPages") {
+					return
+				}
+				if strings.HasPrefix(h, "https://") || strings.HasPrefix(h, "http://") {
 					return
 				}
 				if l > 0 && i == 0 {
@@ -84,11 +87,17 @@ func main() {
 	wg.Wait()
 }
 
-func fetchDoc(method, urlS, selctor string) *goquery.Selection {
+func fetchDoc(method, urlS string, selctor ...string) *goquery.Selection {
 	req, _ := http.NewRequest(method, urlS, nil)
 	res, _ := http.DefaultClient.Do(req)
 	doc, _ := goquery.NewDocumentFromResponse(res)
-	return doc.Find(selctor)
+	for _, item := range selctor {
+		s := doc.Find(item)
+		if s.Size() > 0 {
+			return s
+		}
+	}
+	return nil
 }
 
 func fetchBytes(method, urlS string) io.ReadCloser {
