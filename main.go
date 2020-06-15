@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/nektro/go-util/types"
@@ -101,6 +102,7 @@ func saveFile(urlS string, pathS string, bar *progressbar.ProgressBar) {
 	defer bar.Add(1)
 	defer wg.Done()
 
+	time.Sleep(time.Second / 100)
 	if util.DoesFileExist(pathS) {
 		return
 	}
