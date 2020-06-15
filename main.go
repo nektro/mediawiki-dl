@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -13,6 +12,7 @@ import (
 	"github.com/nektro/go-util/types"
 	"github.com/nektro/go-util/util"
 	"github.com/nektro/go-util/vflag"
+	"github.com/schollz/progressbar/v3"
 )
 
 var (
@@ -36,10 +36,11 @@ func main() {
 		last := ""
 		l := 0
 		j := 0
+		bar := progressbar.Default(int64(1), urlO.Host)
+
 		for {
 			i := 0
 			u1 := item + "?title=Special:AllPages&from=" + last
-			fmt.Println(u1)
 			fetchDoc(http.MethodGet, u1, "#bodyContent a").Each(func(_ int, el *goquery.Selection) {
 				h, _ := el.Attr("href")
 				if h[0] == '#' {
@@ -58,15 +59,14 @@ func main() {
 				last = h
 				i++
 				j++
+				bar.ChangeMax(j)
 				//
 				page, _ := url.QueryUnescape(h)
 				page = strings.ReplaceAll(page, "/", "∕")
 				u2 := item + "?title=Special:Export&action=submit&history=1&pages=" + h
 				p := dir2 + "/" + page + ".xml"
-				go saveFile(u2, p)
+				go saveFile(u2, p, bar)
 			})
-			wg.Wait()
-			fmt.Println()
 			if l == 0 {
 				l = i
 			}
@@ -74,9 +74,10 @@ func main() {
 				break
 			}
 		}
+		wg.Wait()
+		bar.Add(1)
 	}
 	wg.Wait()
-	fmt.Println("done")
 }
 
 func fetchDoc(method, urlS, selctor string) *goquery.Selection {
@@ -92,11 +93,12 @@ func fetchBytes(method, urlS string) io.ReadCloser {
 	return res.Body
 }
 
-func saveFile(urlS string, pathS string) {
+func saveFile(urlS string, pathS string, bar *progressbar.ProgressBar) {
 	wg.Add(1)
 	sem.Add()
 
 	defer sem.Done()
+	defer bar.Add(1)
 	defer wg.Done()
 
 	f, _ := os.Create(pathS)
@@ -110,5 +112,4 @@ func saveFile(urlS string, pathS string) {
 	defer res.Body.Close()
 
 	io.Copy(f, res.Body)
-	fmt.Print("|")
 }
