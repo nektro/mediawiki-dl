@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/nektro/go-util/util"
 	"github.com/nektro/go-util/vflag"
 	"github.com/schollz/progressbar/v3"
+	"go.etcd.io/bbolt"
 )
 
 var (
@@ -32,12 +34,15 @@ func main() {
 		urlO, err := url.Parse(item)
 		util.DieOnError(err)
 		dir2 := dir1 + "/" + urlO.Host
-		os.Mkdir(dir2, os.ModePerm)
 
 		last := ""
 		l := 0
 		j := 0
 		bar := progressbar.Default(int64(1), urlO.Host)
+
+		db, err := bbolt.Open(dir2+".bolt", 0600, nil)
+		util.DieOnError(err)
+		defer db.Close()
 
 		for {
 			i := 0
@@ -63,10 +68,8 @@ func main() {
 				bar.ChangeMax(j)
 				//
 				page, _ := url.QueryUnescape(h)
-				page = strings.ReplaceAll(page, "/", "∕")
 				u2 := item + "?title=Special:Export&action=submit&history=1&pages=" + h
-				p := dir2 + "/" + page + ".xml"
-				go saveFile(u2, p, bar)
+				go saveFile(u2, page, bar, db)
 			})
 			if l == 0 {
 				l = i
@@ -94,7 +97,7 @@ func fetchBytes(method, urlS string) io.ReadCloser {
 	return res.Body
 }
 
-func saveFile(urlS string, pathS string, bar *progressbar.ProgressBar) {
+func saveFile(urlS string, page string, bar *progressbar.ProgressBar, db *bbolt.DB) {
 	wg.Add(1)
 	sem.Add()
 
@@ -103,12 +106,20 @@ func saveFile(urlS string, pathS string, bar *progressbar.ProgressBar) {
 	defer wg.Done()
 
 	time.Sleep(time.Second / 100)
-	if util.DoesFileExist(pathS) {
+	brk := false
+	db.View(func(tx *bbolt.Tx) error {
+		b := tx.Bucket([]byte("pages"))
+		if b == nil {
+			return nil
+		}
+		if b.Get([]byte(page)) != nil {
+			brk = true
+		}
+		return nil
+	})
+	if brk {
 		return
 	}
-
-	f, _ := os.Create(pathS)
-	defer f.Close()
 
 	req, _ := http.NewRequest(http.MethodGet, urlS, nil)
 	req.Header.Add("user-agent", "Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0")
@@ -116,6 +127,11 @@ func saveFile(urlS string, pathS string, bar *progressbar.ProgressBar) {
 
 	res, _ := http.DefaultClient.Do(req)
 	defer res.Body.Close()
+	bys, _ := ioutil.ReadAll(res.Body)
 
-	io.Copy(f, res.Body)
+	db.Update(func(tx *bbolt.Tx) error {
+		b, _ := tx.CreateBucketIfNotExists([]byte("pages"))
+		b.Put([]byte(page), bys)
+		return nil
+	})
 }
