@@ -101,6 +101,10 @@ func saveFile(urlS string, pathS string, bar *progressbar.ProgressBar) {
 	defer bar.Add(1)
 	defer wg.Done()
 
+	if util.DoesFileExist(pathS) {
+		return
+	}
+
 	f, _ := os.Create(pathS)
 	defer f.Close()
 
