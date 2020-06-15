@@ -9,10 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/nektro/go-util/util"
-
 	"github.com/PuerkitoBio/goquery"
 	"github.com/nektro/go-util/types"
+	"github.com/nektro/go-util/util"
 	"github.com/nektro/go-util/vflag"
 )
 
