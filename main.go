@@ -31,6 +31,7 @@ func main() {
 
 	dir1 := "./data"
 	os.Mkdir(dir1, os.ModePerm)
+	logg, _ := os.Create(dir1 + "/errors.log")
 	for _, item := range sites {
 		urlO, err := url.Parse(item)
 		util.DieOnError(err)
@@ -91,6 +92,8 @@ func main() {
 					ns := d.Find("page").Nodes
 					if len(ns) > 0 {
 						doc.Find("siteinfo").AppendNodes(ns[0])
+					} else {
+						fmt.Fprintln(logg, h)
 					}
 				}()
 			})
