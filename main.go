@@ -88,7 +88,10 @@ func main() {
 						doc = d
 						return
 					}
-					doc.Find("siteinfo").AppendNodes(d.Find("page").Nodes[0])
+					ns := d.Find("page").Nodes
+					if len(ns) > 0 {
+						doc.Find("siteinfo").AppendNodes(ns[0])
+					}
 				}()
 			})
 			if l == 0 {
